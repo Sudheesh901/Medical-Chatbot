@@ -1,17 +1,75 @@
-name: Deploy Application Docker Image to EC2 instance
+name: CI-CD Pipeline for Medical RAG App
 
 on:
   push:
     branches: [main]
-
 
 jobs:
   Continuous-Integration:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run RAG Evaluation
+        id: rag_eval
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        run: |
+          echo "Running RAG evaluation..."
+          python evaluation/evaluate_rag_ci.py > rag_output.txt
+
+          echo "RAG evaluation completed."
+          cat rag_output.txt
+
+          # Extract scores
+          RESPONSE_REL=$(grep "answer_relevancy" rag_output.txt | awk '{print $2}')
+          FAITH=$(grep "faithfulness" rag_output.txt | awk '{print $2}')
+          PREC=$(grep "context_precision" rag_output.txt | awk '{print $2}')
+          REC=$(grep "context_recall" rag_output.txt | awk '{print $2}')
+
+          echo "response_relevancy=$RESPONSE_REL" >> $GITHUB_OUTPUT
+          echo "faithfulness=$FAITH" >> $GITHUB_OUTPUT
+          echo "context_precision=$PREC" >> $GITHUB_OUTPUT
+          echo "context_recall=$REC" >> $GITHUB_OUTPUT
+
+      - name: Apply Quality Gate
+        run: |
+          echo "Checking RAG score thresholds..."
+
+          MIN_RESPONSE_REL=0.50
+          MIN_FAITH=0.70
+
+          RESPONSE_REL=${{ steps.rag_eval.outputs.response_relevancy }}
+          FAITH=${{ steps.rag_eval.outputs.faithfulness }}
+
+          echo "Response Relevance = $RESPONSE_REL"
+          echo "Faithfulness = $FAITH"
+
+          # Check thresholds
+          if (( $(echo "$RESPONSE_REL < $MIN_RESPONSE_REL" | bc -l) )); then
+            echo "❌ RAG score too low! Blocking deployment."
+            exit 1
+          fi
+
+          if (( $(echo "$FAITH < $MIN_FAITH" | bc -l) )); then
+            echo "❌ Faithfulness score too low! Blocking deployment."
+            exit 1
+          fi
+
+          echo "✅ Quality gate passed."
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -24,22 +82,21 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
+      - name: Build, Tag, and Push Image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPO }}
           IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .  
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
   Continuous-Deployment:
     needs: Continuous-Integration
     runs-on: self-hosted
+
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
@@ -53,6 +110,14 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Run Docker Image to serve users
+      - name: Run Docker Image on EC2
         run: |
-         docker run -d -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" -e AWS_DEFAULT_REGION="${{ secrets.AWS_DEFAULT_REGION }}" -e PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" -p 8080:8080 "${{ steps.login-ecr.outputs.registry }}"/"${{ secrets.ECR_REPO }}":latest
+          docker stop medical_rag_app || true
+          docker rm medical_rag_app || true
+
+          docker run -d \
+            --name medical_rag_app \
+            -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            -e PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
+            -p 8080:8080 \
+            "${{ steps.login-ecr.outputs.registry }}"/"${{ secrets.ECR_REPO }}":latest

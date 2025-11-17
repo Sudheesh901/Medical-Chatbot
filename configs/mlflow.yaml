@@ -1,0 +1,2 @@
+experiment_name: "medical_rag_experiment"
+tracking_uri: "file:./mlruns"

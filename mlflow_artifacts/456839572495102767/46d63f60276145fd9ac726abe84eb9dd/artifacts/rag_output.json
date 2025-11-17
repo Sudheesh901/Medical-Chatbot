@@ -1,0 +1,32 @@
+[
+    {
+        "question": "What is gigantism?",
+        "answer": "Gigantism is a condition characterized by exceptional growth of long bones due to the abnormal release of growth hormone from the pituitary gland in children whose bony growth plates have not closed. It leads to increased stature and growth in children.",
+        "contexts": [
+            "mone Excess: Acromegaly and Gigantism.\u201d In Harrison\u2019s\nPrinciples of Internal Medicine, ed. Anthony S. Fauci, et\nal. New York: McGraw-Hill, 1997.\nJameson, J. Larry. \u201cGrowth Hormone Excess: Acromegaly and\nGigantism.\u201d In Cecil Textbook of Medicine, ed. J. Claude\nBennett and Fred Plum. Philadelphia: W. B. Saunders Co.,\n1996.\nPERIODICALS\nJaffe, C. A. \u201cAcromegaly: Recognition and Treatment.\u201d Drugs\n47, no. 3 (1994): 425+.\nKrishna, A. Y. \u201cManagement of Acromegaly: A Review.\u201d Ameri-",
+            "Whitehouse Station, NJ: Merck Research Laboratories,\n1997.\nLarsen, D. E., ed. Mayo Clinic Family Health Book. New York:\nWilliam Morrow and Co., Inc., 1996.\nJohn T. Lohr, PhD\nAcromegaly and gigantism\nDefinition\nAcromegaly is a disorder in which the abnormal\nrelease of a particular chemical from the pituitary gland\nin the brain causes increased growth in bone and soft tis-\nsue, as well as a variety of other disturbances throughout\nthe body. This chemical released from the pituitary gland",
+            "is called growth hormone (GH). The body\u2019s ability to\nKEY TERMS\nSympathetic nerve\u2014A nerve of the autonomic\nnervous system that regulates involuntary and\nautomatic reactions, especially to stress.\nprocess and use nutrients like fats and sugars is also\naltered. In children whose bony growth plates have not\nclosed, the chemical changes of acromegaly result in\nexceptional growth of long bones. This variant is called\ngigantism, with the additional bone growth causing"
+        ],
+        "ground_truth": "Gigantism is a rare condition that causes excessive growth and height, significantly above average. It's typically caused by overproduction of growth hormone (GH) by the pituitary gland before the growth plates close."
+    },
+    {
+        "question": "What are symptoms of hypothyroidism?",
+        "answer": "I don't know.",
+        "contexts": [
+            "ty to cool itself. Severe headache, high fever, and\nhot, dry skin may result. In severe cases, a person\nwith heat stroke may collapse or go into a coma.\nHiatal hernia\u2014A condition in which part of the\nstomach protrudes through the diaphragm.\nHyperthyroidism\u2014Secretion of excess thyroid\nhormones by the thyroid gland.\nInflammation\u2014Pain, redness, swelling, and heat\nthat usually develop in response to injury or illness.\nMyasthenia gravis\u2014A condition in which certain",
+            "enlarged thyroid gland, weight loss without loss of\nappetite, sweating, heart palpitations, nervousness,\nand an inability to tolerate heat.\n\u2022 Hashimoto\u2019s thyroiditis. This disorder generally dis-\nplays no symptoms.\n\u2022 Pemphigus vulgaris. This disease is characterized by\nblisters and deep lesions on the skin.\n\u2022 Myasthenia gravis. Characterized by fatigue and mus-\ncle weakness that at first may be confined to certain\nmuscle groups, but then may progress to the point of",
+            "or even months or years. Seizures, myoclonic jerks (invol-\nuntary muscle spasms or twitches), and neck stiffness are\nsome other symptoms of the anoxic condition.\nSymptoms of more localized or less complete oxygen\ndeprivation (hypoxia) include increased breathing rate,\nlightheadedness, dizziness, tingling or warm sensation,\nsweating, reduced field of vision, sleepiness, a bluish tint\nto skin, particularly the fingertips and lips, and behavior\nchanges, often an inappropriate sense of euphoria."
+        ],
+        "ground_truth": "Symptoms include fatigue, increased sensitivity to cold, constipation, dry skin, weight gain, a puffy face, and thinning hair."
+    },
+    {
+        "question": "How to treat diabetes type 2?",
+        "answer": "Type II diabetes can be managed with various therapeutic approaches, including lifestyle changes such as diet and exercise, and drug therapy to control blood sugar levels. Treatment might also involve medications aimed at reducing insulin resistance or increasing insulin secretion. It is essential for individuals with type II diabetes to work closely with healthcare providers to determine the best treatment plan.",
+        "contexts": [
+            "maturity onset or non insulin-dependent. Type I is caused\nby a deficiency of insulin production, while type II is\ncharacterized by insulin resistance.\nTreatment of type I diabetes is limited to insulin\nreplacement, while type II diabetes is treatable by a num-\nber of therapeutic approaches. Many cases of insulin\nresistance are asymptomatic due to normal increases in\ninsulin secretion, and others may be controlled by diet\nand exercise. Drug therapy may be directed towards",
+            "with a physician or pharmacist before combining tri-\ncyclic antidepressants with any other prescription or non-\nprescription (over-the-counter) medicine.\nNancy Ross-Flanigan\nAntidiabetic drugs\nDefinition\nAntidiabetic drugs are medicines that help control\nblood sugar levels in people with diabetes mellitus\n(sugar diabetes).\nPurpose\nDiabetes may be divided into type I and type II, for-\nmerly termed juvenile onset or insulin-dependent, and\nGALE ENCYCLOPEDIA OF MEDICINE 2\n261\nAntidiabetic drugs",
+            "ORGANIZATIONS\nAmerican Diabetes Association. 1701 North Beauregard Street,\nAlexandria, VA 22311. (800) 342-2383. <http://www.\ndiabetes.org>.\nCenters for Disease Control and Prevention. 1600 Clifton Rd.,\nNE, Atlanta, GA 30333. (800) 311-3435, (404) 639-3311.\n<http://www.cdc.gov>.\nNational Diabetes Information Clearinghouse. 1 Information\nWay, Bethesda, MD 20892-3560. (800) 860-8747. <http://\nwww.niddk.nih.gov/health/diabetes/ndic.htm>.\nNational Institute of Diabetes and Digestive and Kidney Dis-"
+        ],
+        "ground_truth": "Treatment includes lifestyle changes such as diet and exercise, oral medications, and sometimes insulin therapy."
+    }
+]
