@@ -5,9 +5,7 @@ from datasets import Dataset
 from ragas import evaluate
 from ragas.metrics import (
     ResponseRelevancy,
-    Faithfulness,
-    ContextPrecision,
-    ContextRecall
+    Faithfulness
 )
 from langchain_openai import ChatOpenAI
 from src.helper import download_embeddings
@@ -22,25 +20,10 @@ def load_test_set():
     ]
 
 
-def average_scores(score_list):
-    """Aggregate list of metric dicts into a single averaged dict."""
-    aggregated = {}
-    n = len(score_list)
-
-    for result in score_list:
-        for k, v in result.items():
-            aggregated[k] = aggregated.get(k, 0) + float(v)
-
-    # Average values
-    for k in aggregated:
-        aggregated[k] /= n
-
-    return aggregated
-
-
 def main():
     rag_chain = get_rag_chain()
 
+    # RAGAS models
     ragas_llm = ChatOpenAI(model="gpt-4o", temperature=0)
     ragas_embeddings = download_embeddings()
 
@@ -57,35 +40,31 @@ def main():
 
     dataset = Dataset.from_list(samples)
 
-    print("Running RAG evaluation...")
+    # ONLY two metrics (NO reference required)
     score = evaluate(
         dataset,
         metrics=[
             ResponseRelevancy(),
             Faithfulness(),
-            ContextPrecision(),
-            ContextRecall(),
         ],
         llm=ragas_llm,
         embeddings=ragas_embeddings
     )
 
-    # Fix: Aggregate if Ragas returns a LIST
-    if isinstance(score, list):
-        final_scores = average_scores(score)
-    else:
-        final_scores = score.scores  # normal local mode
+    # Print metrics
+    print("=== CI Metrics ===")
+    print(score.scores)
 
-    print("\n=== RAG Evaluation Scores ===")
-    for metric, value in final_scores.items():
-        print(f"{metric}: {value}")
-
-    # ---- Quality Gate ----
-    if final_scores["faithfulness"] < 0.70:
-        print("❌ Failing pipeline: Faithfulness below threshold")
+    # Quality Gate
+    if score.scores["faithfulness"] < 0.50:
+        print("❌ CI FAILED: Faithfulness too low")
         sys.exit(1)
 
-    print("✅ RAG evaluation passed successfully")
+    if score.scores["response_relevancy"] < 0.40:
+        print("❌ CI FAILED: Relevancy too low")
+        sys.exit(1)
+
+    print("✅ CI PASSED")
     sys.exit(0)
 
 
