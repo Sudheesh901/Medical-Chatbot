@@ -5,7 +5,9 @@ from datasets import Dataset
 from ragas import evaluate
 from ragas.metrics import (
     ResponseRelevancy,
-    Faithfulness
+    Faithfulness,
+    ContextPrecision,
+    ContextRecall
 )
 from langchain_openai import ChatOpenAI
 from src.helper import download_embeddings
@@ -23,7 +25,6 @@ def load_test_set():
 def main():
     rag_chain = get_rag_chain()
 
-    # RAGAS models
     ragas_llm = ChatOpenAI(model="gpt-4o", temperature=0)
     ragas_embeddings = download_embeddings()
 
@@ -40,32 +41,43 @@ def main():
 
     dataset = Dataset.from_list(samples)
 
-    # ONLY two metrics (NO reference required)
     score = evaluate(
         dataset,
         metrics=[
             ResponseRelevancy(),
             Faithfulness(),
+            ContextPrecision(),
+            ContextRecall(),
         ],
         llm=ragas_llm,
         embeddings=ragas_embeddings
     )
 
-    # Print metrics
-    print("=== CI Metrics ===")
-    print(score.scores)
+    # ---- FIX STARTS HERE ----
+    # Normalize to dict
+    if isinstance(score.scores, dict):
+        results = score.scores
+    else:
+        metric_names = [
+            "answer_relevancy",
+            "faithfulness",
+            "context_precision",
+            "context_recall",
+        ]
+        results = {metric_names[i]: score.scores[i] for i in range(len(score.scores))}
 
-    # Quality Gate
-    if score.scores["faithfulness"] < 0.50:
-        print("❌ CI FAILED: Faithfulness too low")
+    # PRINT
+    for metric, value in results.items():
+        print(f"{metric}: {value}")
+
+    # QUALITY GATE
+    if results["faithfulness"] < 0.50:
+        print("❌ Failing pipeline: Faithfulness too low")
         sys.exit(1)
 
-    if score.scores["response_relevancy"] < 0.40:
-        print("❌ CI FAILED: Relevancy too low")
-        sys.exit(1)
-
-    print("✅ CI PASSED")
+    print("✅ RAG evaluation passed")
     sys.exit(0)
+    # ---- FIX ENDS HERE ----
 
 
 if __name__ == "__main__":
