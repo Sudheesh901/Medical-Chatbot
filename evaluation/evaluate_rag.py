@@ -23,11 +23,11 @@ from pipelines.rag_pipeline import get_rag_chain
 def load_test_set():
     return [
         {"question": "What is gigantism?",
-         "ground_truth": "Gigantism is a rare condition that causes excessive growth and height, significantly above average. It's typically caused by overproduction of growth hormone (GH) by the pituitary gland before the growth plates close."},
+         "reference": "Gigantism is a rare condition that causes excessive growth and height, significantly above average. It's typically caused by overproduction of growth hormone (GH) by the pituitary gland before the growth plates close."},
         {"question": "What are symptoms of hypothyroidism?",
-         "ground_truth": "Symptoms include fatigue, increased sensitivity to cold, constipation, dry skin, weight gain, a puffy face, and thinning hair."},
+         "reference": "Symptoms include fatigue, increased sensitivity to cold, constipation, dry skin, weight gain, a puffy face, and thinning hair."},
         {"question": "How to treat diabetes type 2?",
-         "ground_truth": "Treatment includes lifestyle changes such as diet and exercise, oral medications, and sometimes insulin therapy."},
+         "reference": "Treatment includes lifestyle changes such as diet and exercise, oral medications, and sometimes insulin therapy."},
     ]
 
 
@@ -53,7 +53,7 @@ def main():
 
         for item in dataset:
             q = item["question"]
-            gt=item["ground_truth"]
+            ref = item["reference"]
             print("\nEvaluating:", q)
             response = rag_chain.invoke({"input": q})
             answer = response["answer"]
@@ -63,7 +63,7 @@ def main():
                 "question": q,
                 "answer": answer,
                 "contexts": contexts,
-                "ground_truth": gt
+                "reference": ref
             })
 
 
@@ -71,7 +71,7 @@ def main():
             "question": q,
             "answer": answer,
             "contexts": contexts,
-            "ground_truth": gt
+            "reference": ref
             })
         #log the RAG outputs as artifacts (json file)
         log_json_artifacts(dataset, "evaluation_dataset.json")
