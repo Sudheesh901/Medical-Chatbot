@@ -1,8 +1,9 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import mlflow
 from ragas import evaluate
-from datasets import Dataset # Corrected import from previous issue
+from datasets import Dataset
 from evaluation.log_rag_mlflow import log_rag_to_mlflow
 from evaluation.log_rag_artifacts import log_json_artifacts
 from ragas.metrics import (
@@ -12,53 +13,109 @@ from ragas.metrics import (
     ContextRecall
 )
 
-
-# ➡️ Import your required components for Ragas evaluation
 from langchain_openai import ChatOpenAI
 from src.helper import download_embeddings
-
 from pipelines.rag_pipeline import get_rag_chain
 
 
+# -----------------------------
+# Test Questions + REFERENCES
+# -----------------------------
 def load_test_set():
     return [
-        {"question": "What is gigantism?",
-         "reference": "Gigantism is a rare condition that causes excessive growth and height, significantly above average. It's typically caused by overproduction of growth hormone (GH) by the pituitary gland before the growth plates close."},
-        {"question": "What are symptoms of hypothyroidism?",
-         "reference": "Symptoms include fatigue, increased sensitivity to cold, constipation, dry skin, weight gain, a puffy face, and thinning hair."},
-        {"question": "How to treat diabetes type 2?",
-         "reference": "Treatment includes lifestyle changes such as diet and exercise, oral medications, and sometimes insulin therapy."},
+        {
+            "question": "What is gigantism?",
+            "reference": (
+                "Gigantism is a rare condition that causes excessive growth and "
+                "height due to excess growth hormone before growth plates close."
+            )
+        },
+        {
+            "question": "What are symptoms of hypothyroidism?",
+            "reference": (
+                "Symptoms include fatigue, cold sensitivity, constipation, dry skin, "
+                "weight gain, puffy face, and thinning hair."
+            )
+        },
+        {
+            "question": "How to treat diabetes type 2?",
+            "reference": (
+                "Treatment includes diet, exercise, oral medications, and sometimes insulin."
+            )
+        }
     ]
 
 
+# -----------------------------
+# Normalize ANY Ragas Output
+# -----------------------------
+def normalize_result(result):
+    """
+    Normalize Ragas result into:  {metric: float}
+    Handles:
+    - Local EvaluationResult (result.scores dict)
+    - GHA/CI list of per-sample dicts
+    - Ragas weird fallback formats
+    """
+
+    # Case 1 — Standard EvaluationResult (local run)
+    if hasattr(result, "scores") and isinstance(result.scores, dict):
+        return {k: float(v) for k, v in result.scores.items()}
+
+    # Case 2 — GitHub Actions returns a list of dictionaries
+    if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
+        agg = {}
+        n = len(result)
+        for row in result:
+            for k, v in row.items():
+                try:
+                    agg[k] = agg.get(k, 0.0) + float(v)
+                except:
+                    pass
+        return {k: v / n for k, v in agg.items()}
+
+    # Case 3 — Unexpected, prevent crash
+    return {
+        "answer_relevancy": 0.0,
+        "faithfulness": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0,
+    }
+
+
+# -----------------------------
+# Main Evaluation Pipeline
+# -----------------------------
 def main():
 
-    # Load MLflow config
+    # MLflow settings (local only)
     mlflow.set_tracking_uri("file:./mlruns")
     mlflow.set_experiment("medical_rag_experiment")
 
     with mlflow.start_run():
-        # Instantiate the LLM and Embedding Model for Ragas
-        # The LLM must be a powerful model for accurate critique (GPT-4o)
+
         ragas_llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    
-        # Using same embedding model as indexing
         ragas_embeddings = download_embeddings()
 
-        # 1. Run RAG pipeline to generate answers/contexts
         rag_chain = get_rag_chain()
         dataset = load_test_set()
-        data_for_ragas = [] 
-        rag_outputs = []   # store model outputs for logging
 
+        data_for_ragas = []
+        rag_outputs = []
+
+        # --------------------------
+        # Run RAG on each question
+        # --------------------------
         for item in dataset:
             q = item["question"]
             ref = item["reference"]
-            print("\nEvaluating:", q)
+
+            print(f"\nEvaluating: {q}")
             response = rag_chain.invoke({"input": q})
+
             answer = response["answer"]
             contexts = [doc.page_content for doc in response["context"]]
-            
+
             rag_outputs.append({
                 "question": q,
                 "answer": answer,
@@ -66,23 +123,23 @@ def main():
                 "reference": ref
             })
 
-
             data_for_ragas.append({
-            "question": q,
-            "answer": answer,
-            "contexts": contexts,
-            "reference": ref
+                "question": q,
+                "answer": answer,
+                "contexts": contexts,
+                "reference": ref
             })
-        #log the RAG outputs as artifacts (json file)
-        log_json_artifacts(dataset, "evaluation_dataset.json")
-        log_json_artifacts(rag_outputs, "rag_output.json")
-        
 
-        # 2. Create the Ragas Dataset
+        # Save artifacts
+        log_json_artifacts(dataset, "evaluation_dataset.json")
+        log_json_artifacts(rag_outputs, "rag_outputs.json")
+
+        # --------------------------
+        # Ragas Evaluation
+        # --------------------------
         ragas_dataset = Dataset.from_list(data_for_ragas)
-        
-        # 3. Evaluate RAG using RAGAS, passing the models explicitly
-        print("\nStarting Ragas Evaluation...")
+
+        print("\nStarting Ragas evaluation...")
         score = evaluate(
             ragas_dataset,
             metrics=[
@@ -91,19 +148,19 @@ def main():
                 ContextPrecision(),
                 ContextRecall(),
             ],
-            # ➡️ Explicitly pass your models here!
-            llm=ragas_llm, 
+            llm=ragas_llm,
             embeddings=ragas_embeddings
         )
 
-        # Convert RAGAS scores list → proper dict
-        score_dict = {k: v for d in score.scores for k, v in d.items()}
-        
+        # Normalize results for MLflow
+        score_dict = normalize_result(score)
 
-        #call the new logging function
+        # Log to MLflow
         log_rag_to_mlflow(score_dict)
-        print("\n=== RAG Evaluation Metrics ===")
+
+        print("\n=== FINAL RAG Evaluation Metrics ===")
         print(score_dict)
+
 
 if __name__ == "__main__":
     main()
