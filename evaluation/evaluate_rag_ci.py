@@ -1,5 +1,3 @@
-# GitHub Actions CI RAG Evaluation
-
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -18,19 +16,26 @@ from pipelines.rag_pipeline import get_rag_chain
 
 def load_test_set():
     return [
-        {
-            "question": "What is gigantism?",
-            "reference": "Gigantism is excessive growth caused by too much growth hormone before puberty."
-        },
-        {
-            "question": "What are symptoms of hypothyroidism?",
-            "reference": "Symptoms include fatigue, cold sensitivity, weight gain, constipation, and dry skin."
-        },
-        {
-            "question": "How to treat diabetes type 2?",
-            "reference": "Treatment involves diet, exercise, metformin, and lifestyle modification."
-        },
+        {"question": "What is gigantism?"},
+        {"question": "What are symptoms of hypothyroidism?"},
+        {"question": "How to treat diabetes type 2?"},
     ]
+
+
+def average_scores(score_list):
+    """Aggregate list of metric dicts into a single averaged dict."""
+    aggregated = {}
+    n = len(score_list)
+
+    for result in score_list:
+        for k, v in result.items():
+            aggregated[k] = aggregated.get(k, 0) + float(v)
+
+    # Average values
+    for k in aggregated:
+        aggregated[k] /= n
+
+    return aggregated
 
 
 def main():
@@ -42,19 +47,17 @@ def main():
     samples = []
     for item in load_test_set():
         q = item["question"]
-        reference = item["reference"]
-
         response = rag_chain.invoke({"input": q})
 
         samples.append({
             "question": q,
             "answer": response["answer"],
             "contexts": [d.page_content for d in response["context"]],
-            "reference": reference,  # REQUIRED
         })
 
     dataset = Dataset.from_list(samples)
 
+    print("Running RAG evaluation...")
     score = evaluate(
         dataset,
         metrics=[
@@ -67,16 +70,22 @@ def main():
         embeddings=ragas_embeddings
     )
 
-    # PRINT SCORES FOR GITHUB ACTIONS
-    for metric, value in score.scores.items():
+    # Fix: Aggregate if Ragas returns a LIST
+    if isinstance(score, list):
+        final_scores = average_scores(score)
+    else:
+        final_scores = score.scores  # normal local mode
+
+    print("\n=== RAG Evaluation Scores ===")
+    for metric, value in final_scores.items():
         print(f"{metric}: {value}")
 
-    # QUALITY GATE: Adjust thresholds as needed
-    if score.scores["faithfulness"] < 0.70:
-        print("❌ Failing pipeline: Faithfulness too low")
+    # ---- Quality Gate ----
+    if final_scores["faithfulness"] < 0.70:
+        print("❌ Failing pipeline: Faithfulness below threshold")
         sys.exit(1)
 
-    print("✅ RAG evaluation passed")
+    print("✅ RAG evaluation passed successfully")
     sys.exit(0)
 
 
