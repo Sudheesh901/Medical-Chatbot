@@ -12,5 +12,8 @@ ragas
 datasets
 evaluate
 PyYAML
+sqlalchemy
+psycopg2-binary
+flask_sqlalchemy
 
 -e .
