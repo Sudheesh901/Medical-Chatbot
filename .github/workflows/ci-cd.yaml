@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run RAG Evaluation
+            - name: Run RAG Evaluation
         id: rag_eval
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -34,16 +34,20 @@ jobs:
           echo "RAG evaluation completed."
           cat rag_output.txt
 
-          # Extract scores
-          RESPONSE_REL=$(grep "answer_relevancy" rag_output.txt | awk '{print $2}')
-          FAITH=$(grep "faithfulness" rag_output.txt | awk '{print $2}')
-          PREC=$(grep "context_precision" rag_output.txt | awk '{print $2}')
-          REC=$(grep "context_recall" rag_output.txt | awk '{print $2}')
+          # Extract scores (match exact printed format)
+          RESPONSE_REL=$(grep "answer_relevancy:" rag_output.txt | awk '{print $2}' | tr -d '[:space:]')
+          FAITH=$(grep "faithfulness:" rag_output.txt | awk '{print $2}' | tr -d '[:space:]')
+          PREC=$(grep "context_precision:" rag_output.txt | awk '{print $2}' | tr -d '[:space:]')
+          REC=$(grep "context_recall:" rag_output.txt | awk '{print $2}' | tr -d '[:space:]')
 
-          echo "response_relevancy=$RESPONSE_REL" >> $GITHUB_OUTPUT
-          echo "faithfulness=$FAITH" >> $GITHUB_OUTPUT
-          echo "context_precision=$PREC" >> $GITHUB_OUTPUT
-          echo "context_recall=$REC" >> $GITHUB_OUTPUT
+          # Export sanitized metrics to GITHUB_OUTPUT
+          {
+            echo "response_relevancy=$RESPONSE_REL"
+            echo "faithfulness=$FAITH"
+            echo "context_precision=$PREC"
+            echo "context_recall=$REC"
+          } >> "$GITHUB_OUTPUT"
+
 
       - name: Apply Quality Gate
         run: |
