@@ -16,4 +16,5 @@ sqlalchemy
 psycopg2-binary
 flask_sqlalchemy
 
+
 -e .
