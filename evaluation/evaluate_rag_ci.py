@@ -1,4 +1,3 @@
-# evaluation/evaluate_rag_ci.py  (FINAL VERSION – overwrite fully)
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -18,26 +17,27 @@ def load_test_set():
     ]
 
 
-def normalize_result(result):
-    """
-    Ragas returns different formats depending on environment.
-    This function normalizes into a clean {metric: float} dict.
-    """
-    # Case 1: local run → EvaluationResult with .scores dict
-    if hasattr(result, "scores") and isinstance(result.scores, dict):
-        return {k: float(v) for k, v in result.scores.items()}
+# evaluation/evaluate_rag_ci.py (Final Fix)
 
-    # Case 2: CI run → list of per-sample dicts
-    if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
-        agg = {}
-        n = len(result)
-        for item in result:
-            for k, v in item.items():
-                agg[k] = agg.get(k, 0.0) + float(v)
-        return {k: v / n for k, v in agg.items()}
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    # Case 3: Unexpected fallback
-    return {}
+from datasets import Dataset
+from ragas import evaluate
+from ragas.metrics import ResponseRelevancy, Faithfulness
+from langchain_openai import ChatOpenAI
+from src.helper import download_embeddings
+from pipelines.rag_pipeline import get_rag_chain
+import numpy as np  # Required for np.mean
+
+# Remove normalize_result since we are fixing the logic in main
+
+def load_test_set():
+    return [
+        {"question": "What is gigantism?"},
+        {"question": "What are symptoms of hypothyroidism?"},
+        {"question": "How to treat diabetes type 2?"},
+    ]
 
 
 def main():
@@ -73,31 +73,58 @@ def main():
             embeddings=ragas_embeddings
         )
 
-        print("DEBUG raw score:", score)
+        # ------------------- REAL FINAL FIX -------------------
+        # 1. Access the scores dictionary (where keys point to lists of scores)
+        # We'll use the .scores attribute, which is usually correct.
+        # If the direct scores dict access fails, fall back to the attribute access.
+        try:
+            raw_scores = score.scores
+        except:
+            # Fallback for when 'score' object acts like a dictionary itself
+            raw_scores = score
 
-        results = normalize_result(score)
+        print("DEBUG raw scores (before aggregation):", raw_scores)
+
+        # --- REAL WORKING FIX ---
+        # Ragas returns list[dict], so aggregate manually
+
+        results = {}
+        metric_names = raw_scores[0].keys()  # e.g. "answer_relevancy", "faithfulness"
+
+        for metric in metric_names:
+            metric_values = []
+            for row in raw_scores:
+                val = row.get(metric, None)
+                if val is not None:
+                    metric_values.append(float(val))
+                    
+                    results[metric] = np.mean(metric_values) if metric_values else 0.0
+# --- END FIX ---
+
+        # --------------------------------------------------------
 
         print("=== CI Metrics ===")
         for k, v in results.items():
-            print(f"{k}: {v}")
+            print(f"{k}: {v:.4f}") # Print formatted float
 
-        # Quality gates
+        # Quality gates now compare floats to floats
         if results.get("faithfulness", 0) < 0.20:
             print("❌ CI fail: faithfulness below threshold")
             sys.exit(1)
 
         if results.get("answer_relevancy", results.get("response_relevancy", 0)) < 0.30:
+            # Using both answer_relevancy and response_relevancy for safety
             print("❌ CI fail: relevance below threshold")
             sys.exit(1)
 
         print("✅ CI PASS")
         sys.exit(0)
 
-    except Exception as e:
+    except Exception:
+        import traceback
         print("❌ EXCEPTION THROWN IN CI:")
-        print(str(e))
+        traceback.print_exc()
         sys.exit(1)
-
 
 
 if __name__ == "__main__":
