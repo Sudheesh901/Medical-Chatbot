@@ -11,6 +11,6 @@ mlflow
 ragas
 datasets
 evaluate
-yaml
+PyYAML
 
 -e .
