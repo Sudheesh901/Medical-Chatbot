@@ -1,4 +1,4 @@
-#GitHub Actions will fail without this file:
+# GitHub Actions CI RAG Evaluation
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,9 +18,18 @@ from pipelines.rag_pipeline import get_rag_chain
 
 def load_test_set():
     return [
-        {"question": "What is gigantism?"},
-        {"question": "What are symptoms of hypothyroidism?"},
-        {"question": "How to treat diabetes type 2?"},
+        {
+            "question": "What is gigantism?",
+            "reference": "Gigantism is excessive growth caused by too much growth hormone before puberty."
+        },
+        {
+            "question": "What are symptoms of hypothyroidism?",
+            "reference": "Symptoms include fatigue, cold sensitivity, weight gain, constipation, and dry skin."
+        },
+        {
+            "question": "How to treat diabetes type 2?",
+            "reference": "Treatment involves diet, exercise, metformin, and lifestyle modification."
+        },
     ]
 
 
@@ -33,12 +42,15 @@ def main():
     samples = []
     for item in load_test_set():
         q = item["question"]
+        reference = item["reference"]
+
         response = rag_chain.invoke({"input": q})
-        
+
         samples.append({
             "question": q,
             "answer": response["answer"],
             "contexts": [d.page_content for d in response["context"]],
+            "reference": reference,  # REQUIRED
         })
 
     dataset = Dataset.from_list(samples)
@@ -59,7 +71,7 @@ def main():
     for metric, value in score.scores.items():
         print(f"{metric}: {value}")
 
-    # QUALITY GATE (set your threshold here)
+    # QUALITY GATE: Adjust thresholds as needed
     if score.scores["faithfulness"] < 0.70:
         print("❌ Failing pipeline: Faithfulness too low")
         sys.exit(1)
