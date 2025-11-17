@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-            - name: Run RAG Evaluation
+      - name: Run RAG Evaluation
         id: rag_eval
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -47,7 +47,6 @@ jobs:
             echo "context_precision=$PREC"
             echo "context_recall=$REC"
           } >> "$GITHUB_OUTPUT"
-
 
       - name: Apply Quality Gate
         run: |
