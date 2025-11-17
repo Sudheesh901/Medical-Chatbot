@@ -45,9 +45,7 @@ def main():
         dataset,
         metrics=[
             ResponseRelevancy(),
-            Faithfulness(),
-            ContextPrecision(),
-            ContextRecall(),
+            Faithfulness()
         ],
         llm=ragas_llm,
         embeddings=ragas_embeddings
@@ -60,9 +58,7 @@ def main():
     else:
         metric_names = [
             "answer_relevancy",
-            "faithfulness",
-            "context_precision",
-            "context_recall",
+            "faithfulness"
         ]
         results = {metric_names[i]: score.scores[i] for i in range(len(score.scores))}
 
